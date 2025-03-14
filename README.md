@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a theater reservation system using a microservices architecture. It consists of three independent services built following Clean Architecture principles. Each service handles a specific domain and operates independently, ensuring scalability, maintainability, and flexibility in technology choices.
+This project implements a theater reservation system using microservices. It consists of three independent services built following Clean Architecture principles. Each service handles a specific domain and operates independently, ensuring scalability, maintainability, and flexibility in technology choices.
 
 ## Microservices
 
