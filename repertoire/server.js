@@ -1,10 +1,12 @@
 const path = require("path");
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDefinition = require('./swagger');
 
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 const { createClient } = require("@supabase/supabase-js");
-const { create } = require("domain");
 
 const app = express();
 app.use(express.json());
@@ -28,40 +30,108 @@ const authenticateAdmin = (req, res, next) => {
     }
 };
 
+const swaggerSpec = swaggerJsdoc({
+    swaggerDefinition,
+    apis: [],
+});
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 app.get("/plays", async (req, res) => {
     const { data, error } = await supabase.from("ita_plays").select("*");
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ error: error.message });
+    }
     res.json(data);
 });
 
 app.get("/plays/:playId", async (req, res) => {
     const { playId } = req.params;
-    const { data, error } = await supabase.from("ita_plays").select("*").eq("id", playId).single();
-    if (error) return res.status(500).json({ error: error.message });
+    const { data, error } = await supabase
+    .from("ita_plays")
+    .select("*")
+    .eq("id", playId)
+    .single();
+    
+    if (error) {
+        if (error.message.includes('multiple (or no) rows returned')) {
+        console.log(`Play not found with ID: ${playId}`);
+        return res.status(404).json({ error: "Play not found" });
+        }
+        console.error('Database error:', error);
+        return res.status(500).json({ error: error.message });
+    }
+
     res.json(data);
 });
 
 app.post("/plays", authenticateAdmin, async (req, res) => {
     const { title, duration, description, cast } = req.body;
     const { data, error } = await supabase.from("ita_plays").insert([{ title, duration, description, cast }]);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ error: error.message });
+    }
     res.status(201).json(data);
 });
 
 app.put("/plays/:playId", authenticateAdmin, async (req, res) => {
     const { playId } = req.params;
     const { title, duration, description, cast } = req.body;
-    const { data, error } = await supabase.from("ita_plays").update({ title, duration, description, cast }).eq("id", playId);
-    if (error) return res.status(500).json({ error: error.message });
+    const { data, error } = await supabase
+        .from("ita_plays")
+        .update({ title, duration, description, cast })
+        .select("*")
+        .eq("id", playId)
+        .single();
+
+    
+    if (error) {
+        if (error.message.includes('multiple (or no) rows returned')) {
+        console.log(`Play not found with ID: ${playId}`);
+        return res.status(404).json({ error: "Play not found" });
+        }
+        console.error('Database error:', error);
+        return res.status(500).json({ error: error.message });
+    }
+    
     res.json(data);
 });
 
 app.delete("/plays/:playId", authenticateAdmin, async (req, res) => {
     const { playId } = req.params;
-    const { error } = await supabase.from("ita_plays").delete().eq("id", playId);
-    if (error) return res.status(500).json({ error: error.message });
+    
+    const { data, error, count } = await supabase
+        .from("ita_plays")
+        .delete({ count: 'exact' })
+        .eq("id", playId);
+    
+    if (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ error: error.message });
+    }
+    
+    if (count === 0) {
+        console.log(`[${new Date().toISOString()}] Play not found with ID: ${playId}`);
+        return res.status(404).json({ error: "Play not found" });
+    }
+    
     res.status(204).send();
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+let server;
+
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}, Swagger docs available at /api-docs`);
+  });
+}
+
+module.exports = { app, supabase, server, authenticateAdmin};
