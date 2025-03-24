@@ -36,7 +36,7 @@ This project implements a theater reservation system using microservices. It con
 **Exposed APIs (REST):**
 
 -   `GET /plays`: Fetch details of available plays
--   `GET /plays/{playId}/schedule`: Retrieve play schedules and availability
+-   `GET /plays/{playId}`: Retrieve details of one play
 -   `POST /plays`: Create a new play (admin)
 -   `PUT /plays/{playId}`: Update an existing play (admin)
 -   `DELETE /plays/{playId}`: Delete a play (admin)
