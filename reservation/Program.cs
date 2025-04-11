@@ -51,6 +51,9 @@ builder.Services.AddSingleton<KafkaProducer>(provider =>
     return new KafkaProducer(bootstrapServers, logger);
 });
 builder.Services.AddScoped<ReservationService>();
+builder.Services.AddHostedService<SeatAvailabilityService>();
+builder.Services.AddSingleton<SeatAvailabilityService>(sp => 
+    sp.GetServices<IHostedService>().OfType<SeatAvailabilityService>().First());
 
 var app = builder.Build();
 

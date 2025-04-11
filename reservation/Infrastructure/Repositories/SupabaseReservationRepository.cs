@@ -3,30 +3,96 @@ using Domain.Entities;
 using Supabase;
 using Supabase.Postgrest.Models;
 using Supabase.Postgrest.Responses;
+using System.Text.Json;
 
 namespace Infrastructure.Repositories;
 public class SupabaseReservationRepository : IReservationRepository
 {
     private readonly Client _supabase;
     private readonly ILogger<SupabaseReservationRepository> _logger;
+    private readonly KafkaProducer _kafkaProducer;
+    private readonly SeatAvailabilityService _seatAvailabilityService;
 
-    public SupabaseReservationRepository(Client supabase, ILogger<SupabaseReservationRepository> logger)
+    public SupabaseReservationRepository(
+        Client supabase, 
+        ILogger<SupabaseReservationRepository> logger,
+        KafkaProducer kafkaProducer,
+        SeatAvailabilityService seatAvailabilityService)
     {
         _supabase = supabase;
         _logger = logger;
+        _kafkaProducer = kafkaProducer;
+        _seatAvailabilityService = seatAvailabilityService;
     }
 
     public async Task<Reservation> CreateAsync(Reservation reservation)
     {
         try
         {
+            
+            if (!_seatAvailabilityService.IsSeatAvailable(reservation.PlayId, reservation.SeatNumber))
+            {
+                _logger.LogWarning("Seat {SeatNumber} for play {PlayId} is already taken", 
+                    reservation.SeatNumber, reservation.PlayId);
+                throw new InvalidOperationException("Seat already taken");
+            }
+
+            await _kafkaProducer.PublishSeatEventAsync(
+                reservation.PlayId,
+                reservation.SeatNumber,
+                new SeatEvent
+                {
+                    UserId = reservation.UserId,
+                    Action = "reserved",
+                    Timestamp = DateTime.UtcNow
+            });
+
+            // Create reservation in Supabase
             var result = await _supabase.From<Reservation>().Insert(reservation);
             _logger.LogInformation("Successfully created reservation with ID {Id}.", result.Models.First().Id);
+            
             return result.Models.First();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create reservation.");
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        try
+        {
+            var reservation = await GetByIdAsync(id);
+            if (reservation == null) return false;
+            
+            if (!_seatAvailabilityService.IsReservedByUser(
+                reservation.PlayId, reservation.SeatNumber, reservation.UserId))
+            {
+                _logger.LogWarning("User {UserId} doesn't own reservation {Id}", 
+                    reservation.UserId, id);
+                return false;
+            }
+
+            await _kafkaProducer.PublishSeatEventAsync(
+                reservation.PlayId,
+                reservation.SeatNumber,
+                new SeatEvent
+                {
+                    UserId = reservation.UserId,
+                    Action = "cancelled",
+                    Timestamp = DateTime.UtcNow
+                });
+
+            // Delete from Supabase
+            await _supabase.From<Reservation>().Where(x => x.Id == id).Delete();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while deleting reservation with ID {Id}.", id);
             throw;
         }
     }
@@ -52,37 +118,6 @@ public class SupabaseReservationRepository : IReservationRepository
         }
     }
 
-    public async Task<bool> DeleteAsync(int id)
-    {
-        try
-        {
-            var check = await _supabase.From<Reservation>().Where(x => x.Id == id).Get();
-            if (!check.Models.Any())
-            {
-                _logger.LogWarning("Cannot delete reservation with ID {Id} - not found.", id);
-                return false;
-            }
-
-            await _supabase.From<Reservation>().Where(x => x.Id == id).Delete();
-
-            // Verify deletion
-            check = await _supabase.From<Reservation>().Where(x => x.Id == id).Get();
-            var success = !check.Models.Any();
-
-            if (success)
-                _logger.LogInformation("Successfully deleted reservation with ID {Id}.", id);
-            else
-                _logger.LogWarning("Failed to delete reservation with ID {Id}.", id);
-
-            return success;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while deleting reservation with ID {Id}.", id);
-            throw;
-        }
-    }
-
     public async Task<bool> IsSeatAvailableAsync(int playId, int seatNumber)
     {
         try
@@ -104,4 +139,13 @@ public class SupabaseReservationRepository : IReservationRepository
             throw;
         }
     }
+}
+
+// Event model for Kafka messages
+public class SeatEvent
+{
+    public int SeatNumber { get; set; }
+    public int UserId { get; set; }
+    public string Action { get; set; } // "reserved" or "cancelled"
+    public DateTime Timestamp { get; set; }
 }
