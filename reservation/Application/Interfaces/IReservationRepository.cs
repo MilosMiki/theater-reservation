@@ -5,7 +5,7 @@ using Domain.Entities;
 public interface IReservationRepository
 {
     Task<Reservation> CreateAsync(Reservation reservation);
-    Task<Reservation?> GetByIdAsync(string id);
-    Task<bool> DeleteAsync(string id);
-    Task<bool> IsSeatAvailableAsync(string playId, int seatNumber);
+    Task<Reservation?> GetByIdAsync(int id);
+    Task<bool> DeleteAsync(int id);
+    Task<bool> IsSeatAvailableAsync(int playId, int seatNumber);
 }

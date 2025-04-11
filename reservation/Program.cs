@@ -17,6 +17,10 @@ builder.Logging.AddConsole();
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
 DotNetEnv.Env.Load(envPath);
 
+// Set appUrl
+var appUrl = Environment.GetEnvironmentVariable("DOTNET_URL") ?? "http://localhost:5000";
+builder.WebHost.UseUrls(appUrl);
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -30,7 +34,7 @@ var supabase = new Supabase.Client(url, key);
 await supabase.InitializeAsync();
 
 // DI setup
-var bootstrapServers = "localhost:9093";
+var bootstrapServers = Environment.GetEnvironmentVariable("KAFKA_URL") ?? "localhost:9093";
 builder.Services.AddSingleton(supabase);
 builder.Services.AddScoped<IReservationRepository, SupabaseReservationRepository>();
 builder.Services.AddSingleton<KafkaProducer>(provider =>
@@ -42,6 +46,20 @@ builder.Services.AddSingleton<KafkaProducer>(provider =>
 builder.Services.AddScoped<ReservationService>();
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next.Invoke();
+    }
+    catch (NotSupportedException ex)
+    {
+        // Handle NotSupportedException globally
+        context.Response.StatusCode = 200;
+        await context.Response.WriteAsync("A NotSupportedException occurred. This is okay!");
+    }
+});
 
 app.UseSwagger();
 app.UseSwaggerUI();

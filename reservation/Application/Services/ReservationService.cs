@@ -15,7 +15,7 @@ public class ReservationService
 
     public async Task<Reservation> CreateReservationAsync(Reservation reservation)
     {
-        if(reservation.PlayId == null)
+        if(reservation.PlayId == -1)
             throw new Exception("No play selected.");
 
         if (!await _repository.IsSeatAvailableAsync(reservation.PlayId, reservation.SeatNumber))
@@ -26,6 +26,6 @@ public class ReservationService
         return created;
     }
 
-    public Task<Reservation?> GetReservationAsync(string id) => _repository.GetByIdAsync(id);
-    public Task<bool> CancelReservationAsync(string id) => _repository.DeleteAsync(id);
+    public Task<Reservation?> GetReservationAsync(int id) => _repository.GetByIdAsync(id);
+    public Task<bool> CancelReservationAsync(int id) => _repository.DeleteAsync(id);
 }

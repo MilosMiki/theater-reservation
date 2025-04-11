@@ -21,14 +21,14 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpGet("{reservationId}")]
-    public async Task<IActionResult> Get(string reservationId)
+    public async Task<IActionResult> Get(int reservationId)
     {
         var reservation = await _service.GetReservationAsync(reservationId);
         return reservation == null ? NotFound() : Ok(reservation);
     }
 
     [HttpDelete("{reservationId}")]
-    public async Task<IActionResult> Delete(string reservationId)
+    public async Task<IActionResult> Delete(int reservationId)
     {
         var success = await _service.CancelReservationAsync(reservationId);
         return success ? NoContent() : NotFound();

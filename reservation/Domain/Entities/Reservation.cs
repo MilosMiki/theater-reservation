@@ -3,14 +3,14 @@ using Supabase.Postgrest.Models;
 
 namespace Domain.Entities;
 
-[Table("reservations")]
+[Table("ita_reservations")]
 public class Reservation : BaseModel
 {
     [PrimaryKey("id", false)]
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public int Id { get; set; }
 
     [Column("play_id")]
-    public string? PlayId { get; set; }
+    public int PlayId { get; set; }
 
     [Column("seat_number")]
     public int SeatNumber { get; set; }
@@ -18,6 +18,6 @@ public class Reservation : BaseModel
     [Column("reserved_at")]
     public DateTime ReservedAt { get; set; } = DateTime.UtcNow;
 
-    [Column("user_email")]
-    public string? UserEmail { get; set; }
+    [Column("user_id")]
+    public int UserId { get; set; }
 }

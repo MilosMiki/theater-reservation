@@ -20,13 +20,13 @@ public class SupabaseReservationRepository : IReservationRepository
         return result.Models.First();
     }
 
-    public async Task<Reservation?> GetByIdAsync(string id)
+    public async Task<Reservation?> GetByIdAsync(int id)
     {
         var result = await _supabase.From<Reservation>().Where(x => x.Id == id).Get();
         return result.Models.FirstOrDefault();
     }
 
-    public async Task<bool> DeleteAsync(string id)
+    public async Task<bool> DeleteAsync(int id)
     {   
         // Verify record no longer exists
         var check = await _supabase.From<Reservation>()
@@ -46,7 +46,7 @@ public class SupabaseReservationRepository : IReservationRepository
         return !check.Models.Any(); // True if successfully deleted
     }
 
-    public async Task<bool> IsSeatAvailableAsync(string playId, int seatNumber)
+    public async Task<bool> IsSeatAvailableAsync(int playId, int seatNumber)
     {
         var result = await _supabase.From<Reservation>()
             .Where(x => x.PlayId == playId && x.SeatNumber == seatNumber)
