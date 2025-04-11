@@ -75,7 +75,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var kafkaProducer = scope.ServiceProvider.GetRequiredService<KafkaProducer>();
-    await kafkaProducer.PublishAsync("test_topic", new { Message = "Test message to trigger Kafka logging" });
+    await kafkaProducer.PublishAsync("test_topic", 0, 0);
 }
 
 app.Run();
