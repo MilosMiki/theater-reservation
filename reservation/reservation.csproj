@@ -4,22 +4,53 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    
+    <!-- Linux-specific NuGet paths for Docker -->
+    <RestorePackagesPath Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">/root/.nuget/packages</RestorePackagesPath>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="2.9.0" />
+    <!-- Core Dependencies -->
+    <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+
+    <!-- Supabase -->
     <PackageReference Include="Supabase" Version="1.1.1" />
+    <PackageReference Include="Supabase.Postgrest" Version="4.1.0" />
+
+    <!-- ASP.NET Core -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" /> <!-- Keep original version -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.1" />
-    <PackageReference Include="System.Reactive" Version="6.0.1" />
+
+    <!-- Database -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
+
+    <!-- Logging - match EF Core version -->
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
+
+    <!-- Configuration -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.4" />
+
+    <!-- Utilities -->
     <PackageReference Include="System.Text.Json" Version="9.0.4" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
+
+  <!-- Only apply Linux-specific settings in Docker -->
+  <Target Name="SetContainerNuGetPaths" BeforeTargets="Restore" Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">
+    <PropertyGroup>
+      <RestoreRootConfigDirectory>/root/.nuget</RestoreRootConfigDirectory>
+    </PropertyGroup>
+    <PropertyGroup>
+      <!-- Clear any fallback folder settings -->
+      <RestoreFallbackFolders></RestoreFallbackFolders>
+    </PropertyGroup>
+  </Target>
 
 </Project>

@@ -10,7 +10,7 @@ using Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Omogoči logiranje v konzolo
+// Enable console logging
 builder.Logging.AddConsole();
 
 // Load the .env file
@@ -23,7 +23,15 @@ builder.WebHost.UseUrls(appUrl);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Reservations API",
+        Version = "v1",
+        Description = "API for managing theater reservations"
+    });
+});
 
 // Supabase client
 var url = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? 
@@ -42,7 +50,6 @@ builder.Services.AddSingleton<KafkaProducer>(provider =>
     var logger = provider.GetRequiredService<ILogger<KafkaProducer>>();
     return new KafkaProducer(bootstrapServers, logger);
 });
-// builder.Services.AddSingleton(new KafkaProducer("localhost:9092"));
 builder.Services.AddScoped<ReservationService>();
 
 var app = builder.Build();
@@ -55,9 +62,8 @@ app.Use(async (context, next) =>
     }
     catch (NotSupportedException ex)
     {
-        // Handle NotSupportedException globally
         context.Response.StatusCode = 200;
-        await context.Response.WriteAsync("A NotSupportedException occurred. This is okay!");
+        await context.Response.WriteAsync("A NotSupportedException occurred. This is okay, this is just .net implementing Supabase wrong..");
     }
 });
 
@@ -66,7 +72,7 @@ app.UseSwaggerUI();
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope()) // test Kafka connection
+using (var scope = app.Services.CreateScope())
 {
     var kafkaProducer = scope.ServiceProvider.GetRequiredService<KafkaProducer>();
     await kafkaProducer.PublishAsync("test_topic", new { Message = "Test message to trigger Kafka logging" });
