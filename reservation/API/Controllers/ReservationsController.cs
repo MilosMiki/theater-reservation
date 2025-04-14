@@ -63,7 +63,7 @@ namespace API.Controllers
         /// <response code="200">Returns the requested reservation</response>
         /// <response code="404">Reservation not found</response>
         [HttpGet("{reservationId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(Reservation), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Get(int reservationId)
         {
@@ -91,13 +91,13 @@ namespace API.Controllers
     /// </summary>
     public class ReservationRequest
     {
-        /// <example>0</example>
+        /// <example>1</example>
         public int PlayId { get; set; }
         
-        /// <example>0</example>
+        /// <example>1</example>
         public int SeatNumber { get; set; }
         
-        /// <example>0</example>
+        /// <example>1</example>
         public int UserId { get; set; }
     }
 }
