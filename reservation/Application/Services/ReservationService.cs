@@ -23,19 +23,18 @@ public class ReservationService
 
     public async Task<Reservation> CreateReservationAsync(Reservation reservation)
     {
-        if(reservation.PlayId == -1)
+        if(reservation.PlayId == -1){
+            _logger.LogWarning("Invalid PlayId: -1");
             throw new Exception("No play selected.");
-
+        }
         try
         {
             var topicName = $"play-{reservation.PlayId}";
             
             // Publish to Kafka
-            await _producer.PublishAsync(
-                topic: topicName,
-                key: reservation.SeatNumber,
-                value: reservation.UserId
-            );
+            _logger.LogDebug("Attempting to publish to Kafka...");
+            await _producer.PublishAsync(topicName, reservation.SeatNumber, reservation.UserId);
+            _logger.LogInformation("Successfully published to Kafka");
             
             _logger.LogInformation(
                 "Published reservation event to {Topic} (Seat: {Seat}, User: {User})",

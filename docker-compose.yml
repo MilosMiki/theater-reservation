@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  # Mobile Gateway (NGINX)
+  mobile_gateway:
+    build: ./mobile-gateway
+    ports:
+      - "4001:4001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Web Gateway (Express)
+  web_gateway:
+    build: ./web-gateway
+    ports:
+      - "4000:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SERVICES_PLAYS=http://host.docker.internal:3000
+      - SERVICES_RESERVATIONS=http://host.docker.internal:5000
+      - SERVICES_USERS=http://host.docker.internal:8080

@@ -12,7 +12,10 @@ public class KafkaProducer
     {
         _logger = logger;
         
-        var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
+        var producerConfig = new ProducerConfig { 
+            BootstrapServers = bootstrapServers, 
+            Acks = Acks.All
+        };
         _producer = new ProducerBuilder<int, int>(producerConfig)
             .SetKeySerializer(Serializers.Int32)
             .SetValueSerializer(Serializers.Int32)
@@ -24,21 +27,29 @@ public class KafkaProducer
 
     public async Task PublishAsync(string topic, int key, int value)
     {
+        _logger.LogInformation("Entering Publish to Kafka for topic: {topic}", topic);
         await EnsureTopicExists(topic);
+        _logger.LogInformation("Checked topic exists: {topic}", topic);
         
         try
         {
-            await _producer.ProduceAsync(topic, new Message<int, int> 
+            var deliveryReport = await _producer.ProduceAsync(topic, new Message<int, int> 
             { 
                 Key = key,
                 Value = value 
             });
-            _logger.LogInformation("Message successfully published to {Topic} (Key: {Key}, Value: {Value})", 
-                topic, key, value);
+            _logger.LogInformation(
+            "Delivered to: {Topic} [Partition {Partition} @ {Offset}] (Key: {Key})",
+            deliveryReport.Topic,
+            deliveryReport.Partition,
+            deliveryReport.Offset,
+            key);
         }
-        catch (Exception ex)
+        catch (ProduceException<int, int> ex)
         {
-            _logger.LogError(ex, "Error publishing message to topic {Topic}", topic);
+            _logger.LogError(ex, 
+                "Failed to deliver to {Topic} (Key: {Key}): {Reason}",
+                topic, key, ex.Error.Reason);
             throw;
         }
     }
